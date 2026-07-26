@@ -1,88 +1,87 @@
 ---
 title: Ограничения
+description: Компоненты ограничений Basis и автоматическая поддержка twist-костей рук.
 ---
-import { Step, Steps } from 'fumadocs-ui/components/steps';
+
 import { Callout } from 'fumadocs-ui/components/callout';
-import { Accordion,Accordions } from 'fumadocs-ui/components/accordion';
 
-* Basis в настоящее время использует пакет Animation Rigging для предоставления ограничений. 
+Ограничения описывают, как один Transform может влиять на другой. Они могут перемещать объект, направлять его на цель, решать цепочку костей или сохранять отношения между несколькими ссылками.
 
-<Callout type="info">
-Этот пакет используется из-за отсутствия реализации многопоточной системы ограничений с открытым исходным кодом. Если у кого-то есть время или желание разработать её, вклады или новые проекты будут очень приветствоваться.
-</Callout>
+Basis предоставляет собственные компоненты ограничений и вычисляет их во время работы аватара. При конвертации аватара Unity названия Unity и Animation Rigging ниже показывают, каким знакомым компонентам соответствует каждое ограничение Basis.
 
-Документацию по всем ограничениям, предоставляемым Animation Rigging, можно найти [здесь](https://docs.unity3d.com/Packages/com.unity.animation.rigging@1.4/manual/ConstraintComponents.html)
+Сейчас Basis определяет **14 конкретных типов ограничений** в `BasisConstraintType`.
 
-## Настройка для пакетов Animation Rigging
-<Steps>
+## Ограничения Transform
 
-<Step>
-**Добавление Rig Builder**: Добавьте компонент `Rig Builder` и компонент `Animator` к GameObject `Armature`. 
+Используйте эти ограничения, когда основным результатом должна быть позиция, вращение, масштаб или отношение, похожее на родительское.
 
-![Окно инспектора на GameObject Armature](/img/avatars/17.png)
+- **Position** — `BasisPositionConstraint` смешивает позицию Transform из одной или нескольких источников с весами. Маски осей ограничивают влияние определёнными осями, а смещения не дают цели сразу переместиться на источник. Соответствует `PositionConstraint` Unity и `MultiPositionConstraint` Animation Rigging.
 
-<Callout type="info">
-*Basis использует Animator корневого/аватарного GameObject для анимации и риггинга*. 
-</Callout>
+- **Rotation** — `BasisRotationConstraint` смешивает вращение из одной или нескольких источников. Маски по осям и смещения вращения позволяют сохранить часть исходной позы. Соответствует `RotationConstraint` Unity и `MultiRotationConstraint` Animation Rigging.
 
-<Callout type="warning">
-**Нельзя использовать Animator корня для Rig Builder — это сломает анимацию и загрузчик арматуры Basis.**
-</Callout>
-</Step>
-<Step>
-**Создание Rig Setup**: Создайте пустой GameObject с именем "Rig Setup" и добавьте к нему компонент `Rig`.
+- **Scale** — `BasisScaleConstraint` смешивает масштаб Transform из одной или нескольких источников. Соответствует `ScaleConstraint` Unity.
 
-![Окно инспектора для GameObject Rig Setup](/img/avatars/18.png)
+- **Parent** — `BasisParentConstraint` объединяет позицию и вращение, позволяя объекту следовать источникам, похожим на родителей, без изменения иерархии. Соответствует `ParentConstraint` Unity и `MultiParentConstraint` Animation Rigging.
 
-</Step>
+### Пример: ограничение Parent
 
-<Step>
-**Назначение Rig Setup**: Назначьте GameObject "Rig Setup" компоненту `Rig Builder` арматуры.
+На примере Inspector ниже показан `Basis Parent Constraint` с двумя исходными Transform. Вес каждой источника равен `1`, поэтому ограниченный объект управляется объединённым результатом `Point L` и `Point R`.
 
-![Окно инспектора арматуры после назначения](/img/avatars/19.png)
+В разделе **Parent** сохраняются исходные позиция и вращение цели, а также можно заморозить отдельные оси позиции или вращения. **Per-Source Offsets** хранит отдельное смещение позиции и вращения для каждой источника, поэтому цель может следовать за ней, не совпадая с ней напрямую.
 
-</Step>
-</Steps>
+![Basis Parent Constraint с двумя источниками и весами](/img/avatars/basis-parent-constraint.png)
 
-## Заметки о Jiggle Bones
+## Ограничения направления и движения
 
-Если Jiggle Bones влияет на какие-либо ограничения, необходимо добавить `Rig Transform` ко всем родительским костям кости с ограничением.
+Используйте их, когда Transform должен смотреть на цель, смешиваться между позами или следовать источнику с определённым характером движения.
 
-Пример: у вас есть лазер, направленный в сторону головы аватара. Необходимо добавить компоненты `Rig Transform` начиная с родителя лазера, двигаясь вверх, пока не встретится кость арматуры/гуманоида.
-<Callout type="info">
-Это включает все исходные кости, не являющиеся частью гуманоида. Пример: Крылья, подверженные влиянию Jiggle Bones, требуют компонентов `Rig Transform`, если у вас есть ограничение, которое на них ссылается.
-</Callout>
-<Accordions type="single">
-<Accordion title="Пример Jiggle Bone">
-![Пример Jiggle Bones](/img/avatars/20.png)
-</Accordion>
-</Accordions>
+- **Aim** — `BasisAimConstraint` вращает объект так, чтобы заданная локальная ось указывала на взвешенные позиции источников. Соответствует `AimConstraint` Unity и `MultiAimConstraint` Animation Rigging.
 
-## Ограничения вращения
-<Steps>
+- **Look At** — `BasisLookAtConstraint` поворачивает объект к позициям источников с помощью решения типа look-at. Соответствует `LookAtConstraint` Unity.
 
-<Step>
+- **Blend** — `BasisBlendConstraint` смешивает позицию и вращение между двумя источниками. Он полезен, когда Transform должен плавно перемещаться между двумя ссылками. Соответствует `BlendConstraint` Animation Rigging.
 
-Сначала выполните [Настройку](#setup-for-animation-rigging-packages), затем продолжайте с инструкциями по настройке ограничений вращения.
+- **Override Transform** — `BasisOverrideTransform` заменяет или смещает позицию и вращение Transform. Переопределение можно применить относительно источника для управляемой коррекции существующей позы. Соответствует `OverrideTransform` Animation Rigging.
 
-</Step>
+- **Damped Transform** — `BasisDampedTransform` следует за источником с затухающим движением позиции и вращения. Цель постепенно догоняет источник, а не перемещается к нему мгновенно. Соответствует `DampedTransform` Animation Rigging.
 
-<Step>
+## IK- и twist-ограничения
 
-Добавьте компонент `Multi-Rotation Constraint` к GameObject, являющемуся дочерним объектом `Rig Setup`.
+Эти ограничения решают отношения между несколькими костями, а не обрабатывают каждый Transform отдельно.
 
-![Компонент Twist в окне инспектора](/img/avatars/21.png)
+- **Twist Correction** — `BasisTwistCorrection` извлекает осевое вращение из источника и применяет его взвешенную долю к twist-узлу. Соответствует `TwistCorrection` Animation Rigging.
 
-</Step>
+- **Two-Bone IK** — `BasisTwoBoneIK` решает цепочку из трёх суставов, например плечо, предплечье и кисть, направляя её к цели. Необязательный hint помогает управлять направлением сгиба среднего сустава. Соответствует `TwoBoneIKConstraint` Animation Rigging.
 
-<Step>
+- **Chain IK** — `BasisChainIK` решает многокостную цепочку в направлении цели. Соответствует `ChainIKConstraint` Animation Rigging.
 
-Назначьте кость, на которую нужно воздействовать, в поле Constrained Object. Можно использовать один или несколько исходных объектов.
-<Callout type="info">
-Вы можете перетаскивать исходные кости/GameObjects в область, выделенную красным.
-На каждый GameObject можно добавить только один `Multi-Rotation Constraint`.
-</Callout>
-![Компонент Twist в окне инспектора](/img/avatars/22.png)
-</Step>
+- **Twist Chain** — `BasisTwistChain` распределяет twist между корневой и конечной целями цепочки. При конвертации Basis создаёт по одному компоненту на каждую кость цепочки. Соответствует `TwistChainConstraint` Animation Rigging.
 
-</Steps>
+## Связи между ссылками
+
+- **Multi-Referential** — `BasisMultiReferential` сохраняет отношения между несколькими ссылочными Transform. Выбранная ссылка становится драйвером, а остальные следуют её отношению. Соответствует `MultiReferentialConstraint` Animation Rigging.
+
+## Общие данные ограничений
+
+Следующие типы являются частью framework ограничений, но не являются конкретными компонентами, которые добавляются как отдельные поведения.
+
+- `BasisConstraintBase` — общий базовый компонент. Он хранит вес, активное и заблокированное состояния, данные источников и заданный автором порядок вычисления.
+
+- `BasisConstraintSourceEntry` представляет один источник. Он содержит исходный `Transform` и относительный вес источника.
+
+- `BasisConstraintAxes` определяет, какие оси затрагивает ограничение. Значения: `None`, `X`, `Y`, `Z` и `All`.
+
+- `BasisConstraintWorldUp` выбирает ссылку up, когда ограничению нужно направление вверх. Значения: `SceneUp`, `ObjectUp`, `ObjectRotationUp`, `Vector` и `None`.
+
+## Автоматическая поддержка twist-костей рук
+
+Basis поддерживает автоматическое создание и обработку twist-костей рук в составе full-body IK. Эта функция не представлена компонентом `BasisConstraintBase`, поэтому не отображается в иерархии как отдельное ограничение.
+
+Поведение реализовано в `BasisFullIKConstraintJob`. После решения IK руки Basis:
+
+1. Ищет прямых детей костей плеча и предплечья, в имени которых есть `twist` или `roll`.
+2. Привязывает эти Transform к full-body IK job.
+3. Выполняет этап twist-костей после решения руки.
+4. Напрямую записывает мировое вращение найденной twist-кости.
+
+Поэтому у twist-кости может быть драйвер вращения даже без `BasisRotationConstraint`. При поиске конфликта проверяйте не только компоненты ограничений, но и прямых детей в иерархии руки.

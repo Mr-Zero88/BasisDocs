@@ -1,89 +1,87 @@
 ---
 title: 컨스트레인트
+description: Basis에서 사용할 수 있는 컨스트레인트 컴포넌트와 팔 Twist 본의 자동 지원을 설명합니다.
 ---
-import { Step, Steps } from 'fumadocs-ui/components/steps';
+
 import { Callout } from 'fumadocs-ui/components/callout';
-import { Accordion,Accordions } from 'fumadocs-ui/components/accordion';
 
-* Basis는 현재 컨스트레인트를 제공하기 위해 Animation Rigging 패키지를 사용합니다.
+컨스트레인트는 하나의 Transform이 다른 Transform에 어떤 영향을 주는지 정의합니다. 오브젝트를 이동하거나 타겟을 향하게 하고, 본 체인을 풀거나 여러 참조 사이의 관계를 유지하는 데 사용할 수 있습니다.
 
-<Callout type="info">
-이 패키지는 멀티 스레드 컨스트레인트 시스템의 오픈 소스 구현이 없어 사용됩니다. 이를 개발할 시간이나 관심이 있는 분은 기여나 새 프로젝트를 매우 환영합니다.
-</Callout>
+Basis는 자체 컨스트레인트 컴포넌트를 제공하며 아바타 런타임의 일부로 이를 평가합니다. Unity 아바타를 변환하는 경우, 아래의 Unity 및 Animation Rigging 이름을 대응하는 Basis 컨스트레인트를 찾는 기준으로 사용할 수 있습니다.
 
-Animation Rigging이 제공하는 모든 컨스트레인트에 대한 문서는 [여기](https://docs.unity3d.com/Packages/com.unity.animation.rigging@1.4/manual/ConstraintComponents.html)에서 찾을 수 있습니다.
+Basis는 현재 `BasisConstraintType`에 **14개의 구체적인 컨스트레인트 타입**을 정의합니다.
 
-## Animation Rigging 패키지 설정
-<Steps>
+## Transform 컨스트레인트
 
-<Step>
-**Rig Builder 추가**: `Armature` GameObject에 `Rig Builder` 컴포넌트와 `Animator` 컴포넌트를 추가합니다.
+결과가 주로 위치, 회전, 스케일 또는 부모와 비슷한 관계여야 할 때 사용하는 컨스트레인트입니다.
 
-![Armature GameObject의 인스펙터 창](/img/avatars/17.png)
+- **Position** — `BasisPositionConstraint`는 하나 이상의 가중치가 있는 소스로부터 Transform의 위치를 혼합합니다. 축 마스크로 영향을 받는 위치 축을 제한할 수 있고, 오프셋으로 대상이 소스에 바로 겹치지 않게 할 수 있습니다. Unity의 `PositionConstraint` 및 Animation Rigging의 `MultiPositionConstraint`에 대응합니다.
 
-<Callout type="info">
-*Basis는 애니메이션 및 리깅에 루트/아바타의 GameObject 애니메이터를 사용합니다*.
-</Callout>
+- **Rotation** — `BasisRotationConstraint`는 하나 이상의 소스로부터 회전을 혼합합니다. 축별 마스크와 회전 오프셋을 사용하면 원래 포즈의 일부를 유지할 수 있습니다. Unity의 `RotationConstraint` 및 Animation Rigging의 `MultiRotationConstraint`에 대응합니다.
 
-<Callout type="warning">
-**Rig Builder에 루트의 애니메이터를 사용할 수 없으며, 이는 애니메이션과 Basis armature 로더를 중단시킵니다.**
-</Callout>
-</Step>
-<Step>
-**Rig Setup 생성**: "Rig Setup"이라는 빈 GameObject를 만들고 여기에 `Rig` 컴포넌트를 추가합니다.
+- **Scale** — `BasisScaleConstraint`는 하나 이상의 소스로부터 Transform의 스케일을 혼합합니다. Unity의 `ScaleConstraint`에 대응합니다.
 
-![Rig Setup GameObject의 인스펙터 창](/img/avatars/18.png)
+- **Parent** — `BasisParentConstraint`는 위치와 회전을 함께 처리하여 계층을 변경하지 않고도 오브젝트가 부모와 같은 소스를 따라가게 합니다. Unity의 `ParentConstraint` 및 Animation Rigging의 `MultiParentConstraint`에 대응합니다.
 
-</Step>
+### 예시: Parent 컨스트레인트
 
-<Step>
-**Rig Setup 할당**: "Rig Setup" GameObject를 `Armature`의 `Rig Builder` 컴포넌트에 할당합니다.
+아래 Inspector 예시는 두 개의 소스 Transform을 사용하는 `Basis Parent Constraint`를 보여 줍니다. 두 소스의 가중치가 각각 `1`이므로 제한된 오브젝트는 `Point L`과 `Point R`의 결합된 결과로 제어됩니다.
 
-![할당 후 Armature의 인스펙터 창](/img/avatars/19.png)
+**Parent** 섹션에는 대상의 휴식 상태 위치와 회전이 저장되며, 개별 위치 축과 회전 축을 고정할 수 있습니다. **Per-Source Offsets**에는 각 소스별 위치 및 회전 오프셋이 저장되므로 대상이 소스를 따라가면서도 바로 겹치지 않게 할 수 있습니다.
 
-</Step>
-</Steps>
+![두 개의 가중치 소스를 사용하는 Basis Parent Constraint](/img/avatars/basis-parent-constraint.png)
 
-## 지글 본에 관한 참고 사항
+## 방향 및 모션 컨스트레인트
 
-Jiggle Bones가 컨스트레인트에 영향을 미치는 경우 컨스트레인트 본의 모든 부모 본에 `Rig Transform`을 추가해야 합니다.
+Transform이 타겟을 바라보거나, 여러 포즈 사이를 혼합하거나, 특정한 움직임으로 소스를 따라가야 할 때 사용합니다.
 
-예: 아바타 머리 방향을 바라보도록 컨스트레인트된 레이저가 있습니다. 레이저의 부모부터 시작하여 Armature/Humanoid 본에 도달할 때까지 `Rig Transform` 컴포넌트를 추가해야 합니다.
-<Callout type="info">
-휴머노이드에 속하지 않는 경우 모든 소스 본이 포함됩니다. 예: Jiggle Bones의 영향을 받는 날개는 컨스트레인트가 이를 참조하는 경우 `Rig Transform` 컴포넌트가 필요합니다.
-</Callout>
-<Accordions type="single">
-<Accordion title="지글 본 예시">
-![지글 본 예시](/img/avatars/20.png)
-</Accordion>
-</Accordions>
+- **Aim** — `BasisAimConstraint`는 설정된 로컬 축이 소스의 가중치가 적용된 위치를 향하도록 오브젝트를 회전합니다. Unity의 `AimConstraint` 및 Animation Rigging의 `MultiAimConstraint`에 대응합니다.
 
+- **Look At** — `BasisLookAtConstraint`는 Look At 방식의 해법으로 소스 위치를 향하도록 오브젝트를 회전합니다. Unity의 `LookAtConstraint`에 대응합니다.
 
-## 회전 컨스트레인트
-<Steps>
+- **Blend** — `BasisBlendConstraint`는 두 소스 사이에서 위치와 회전을 혼합합니다. Transform을 두 참조 사이에서 부드럽게 이동시키고 싶을 때 유용합니다. Animation Rigging의 `BlendConstraint`에 대응합니다.
 
-<Step>
+- **Override Transform** — `BasisOverrideTransform`은 Transform의 위치와 회전을 덮어쓰거나 오프셋합니다. 소스를 기준으로 적용할 수 있어 기존 포즈를 제어된 방식으로 보정할 수 있습니다. Animation Rigging의 `OverrideTransform`에 대응합니다.
 
-먼저 [설정](#setup-for-animation-rigging-packages)을 수행한 후 회전 컨스트레인트 설정 지침을 계속합니다.
+- **Damped Transform** — `BasisDampedTransform`은 감쇠된 위치 및 회전 움직임으로 소스를 따라갑니다. 대상이 즉시 이동하지 않고 점진적으로 소스에 가까워집니다. Animation Rigging의 `DampedTransform`에 대응합니다.
 
-</Step>
+## IK 및 Twist 컨스트레인트
 
-<Step>
+이 컨스트레인트들은 각 Transform을 따로 처리하는 대신 여러 본 사이의 관계를 풉니다.
 
-`Rig Setup` GameObject의 자식인 gameobject에 `Multi-Rotation Constraint` 컴포넌트를 추가합니다.
+- **Twist Correction** — `BasisTwistCorrection`은 소스에서 축 방향 Twist를 추출하여 그 일부를 가중치와 함께 Twist 노드에 적용합니다. Animation Rigging의 `TwistCorrection`에 대응합니다.
 
-![인스펙터 창의 Twist 컴포넌트](/img/avatars/21.png)
+- **Two-Bone IK** — `BasisTwoBoneIK`는 상완, 전완, 손과 같은 세 관절 체인을 타겟을 향하도록 풉니다. 선택적인 Hint로 가운데 관절이 구부러지는 방향을 제어할 수 있습니다. Animation Rigging의 `TwoBoneIKConstraint`에 대응합니다.
 
-</Step>
+- **Chain IK** — `BasisChainIK`는 여러 본으로 이루어진 체인을 타겟을 향하도록 풉니다. Animation Rigging의 `ChainIKConstraint`에 대응합니다.
 
-<Step>
+- **Twist Chain** — `BasisTwistChain`은 체인의 루트 타겟과 끝 타겟 사이에 Twist를 분배합니다. 변환 중 Basis는 체인의 각 본마다 하나의 컴포넌트를 생성합니다. Animation Rigging의 `TwistChainConstraint`에 대응합니다.
 
-Constrained Object 필드에 영향을 받을 본을 할당합니다. 하나 이상의 소스 오브젝트를 사용할 수 있습니다.
-<Callout type="info">
-빨간색으로 강조 표시된 Source Objects 영역에 소스 본/GameObject를 드래그 앤 드롭할 수 있습니다.
-gameObject당 하나의 `Multi-Rotation Constraint`만 추가할 수 있습니다.
-</Callout>
-![인스펙터 창의 Twist 컴포넌트](/img/avatars/22.png)
-</Step>
+## 참조 관계
 
-</Steps>
+- **Multi-Referential** — `BasisMultiReferential`은 여러 참조 Transform 사이의 관계를 유지합니다. 선택한 하나의 참조가 드라이버가 되고 나머지는 그 관계를 따라갑니다. Animation Rigging의 `MultiReferentialConstraint`에 대응합니다.
+
+## 공유 컨스트레인트 데이터
+
+다음 타입은 컨스트레인트 프레임워크의 일부이지만 독립적인 동작으로 추가하는 구체적인 컨스트레인트 컴포넌트는 아닙니다.
+
+- `BasisConstraintBase`는 공통 기본 컴포넌트입니다. 가중치, 활성 및 잠금 상태, 소스 데이터, 작성자가 지정한 평가 순서 등을 저장합니다.
+
+- `BasisConstraintSourceEntry`는 하나의 소스를 나타냅니다. 소스 `Transform`과 해당 소스의 상대 가중치를 포함합니다.
+
+- `BasisConstraintAxes`는 컨스트레인트가 영향을 주는 축을 제어합니다. 값은 `None`, `X`, `Y`, `Z`, `All`입니다.
+
+- `BasisConstraintWorldUp`은 Up 방향이 필요한 컨스트레인트에서 사용할 참조를 선택합니다. 값은 `SceneUp`, `ObjectUp`, `ObjectRotationUp`, `Vector`, `None`입니다.
+
+## 팔 Twist 본 자동 지원
+
+Basis는 Full-Body IK 흐름의 일부로 팔 Twist 본의 자동 생성과 지원을 포함합니다. 이 기능은 `BasisConstraintBase` 컴포넌트로 표현되지 않으므로 계층에 별도의 컨스트레인트로 나타나지 않습니다.
+
+이 동작은 `BasisFullIKConstraintJob` 내부에 구현되어 있습니다. 팔 IK를 푼 뒤 Basis는 다음을 수행합니다.
+
+1. 이름에 `twist` 또는 `roll`이 포함된 상완과 전완 본의 직접 자식을 찾습니다.
+2. 해당 Transform을 Full-Body IK 작업에 바인딩합니다.
+3. 팔을 푼 뒤 Twist 본 단계를 실행합니다.
+4. 감지된 Twist 본의 월드 회전을 직접 씁니다.
+
+따라서 Twist 본에 `BasisRotationConstraint`가 없어도 회전 드라이버가 있을 수 있습니다. Twist 충돌을 조사할 때는 컨스트레인트 컴포넌트뿐 아니라 팔 계층의 직접 자식도 확인하세요.
